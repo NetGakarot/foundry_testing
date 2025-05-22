@@ -129,7 +129,7 @@ contract Interaction is Test {
     }
 
     function testWithdrawFailures2() public {
-        MyContract dummy = new MyContract();
+        Dummy dummy = new Dummy();
         vm.deal(address(dummy), 1 ether);
         vm.startPrank(address(dummy));
         target.deposit{value:1 ether}();
@@ -140,7 +140,7 @@ contract Interaction is Test {
     }
 
     function testSelfDestructTransferFailure() public {
-        MyContract dummy = new MyContract();
+        Dummy dummy = new Dummy();
         vm.deal(address(target), 10 ether);
         target.transferOwnership(address(dummy));
         vm.startPrank(address(dummy));
