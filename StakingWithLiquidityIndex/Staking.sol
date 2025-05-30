@@ -9,11 +9,6 @@ interface IaToken {
     function burn(address to, uint256 amount) external;
 }
 
-interface IAggregator {
-    function price(address asset) external view returns (uint256);
-}
-
-
 contract Staking is Ownable {
     error InvalidAmount();
     error InvalidAsset();
@@ -22,7 +17,6 @@ contract Staking is Ownable {
     event Deposit(address indexed user, address indexed asset, uint256 amount);
     event Withdraw(address indexed user, address indexed asset, uint256 amount);
 
-    IAggregator public aggr;
     uint256 reserveFactor;
     uint256 apy;
 
@@ -38,8 +32,9 @@ contract Staking is Ownable {
     uint256 public constant RAY = 1e27;
     uint256 public constant SECONDS_PER_YEAR = 31536000;
 
-    constructor(address _aggr) Ownable(msg.sender) {
-        aggr = IAggregator(_aggr);
+    constructor(uint256 _apy, uint256 _reserveFactor) Ownable(msg.sender) {
+        apy = _apy;
+        reserveFactor = _reserveFactor;
     }
 
     function addAllowedToken(address asset, address _aToken) external onlyOwner {
@@ -53,10 +48,6 @@ contract Staking is Ownable {
     function removeToken(address asset) external onlyOwner {
         allowedToken[asset] = false;
         aToken[asset] = address(0);
-    }
-
-    function changeAggregator(address _aggr) external onlyOwner {
-        aggr = IAggregator(_aggr);
     }
 
     function setReserveFactor(uint256 _factor) external onlyOwner {
@@ -108,8 +99,6 @@ contract Staking is Ownable {
         totalPool[asset] -= amount;
         emit Withdraw(msg.sender, asset, amount);
     }
-
-
 
     function balanceOf(address user, address asset) public view returns (uint256) {
         uint256 index = liquidityIndex[asset];
