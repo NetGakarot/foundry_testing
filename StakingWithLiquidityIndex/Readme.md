@@ -40,4 +40,13 @@ This is a modern Solidity-based staking contract that uses a scalable balance sy
 ## 🛠️ Configuration
 
 - `APY` — Annual yield in percentage (e.g. 7 = 7% per year)
-- `reserveFac
+- `reserveFactor` — Portion of interest held by protocol (e.g. 2 = 2%)
+
+---
+
+## 🧪 Testing (Foundry)
+
+Run all tests:
+
+```bash
+forge test
