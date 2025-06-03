@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.13;
+pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -16,6 +16,8 @@ contract Staking is Ownable {
 
     event Deposit(address indexed user, address indexed asset, uint256 amount);
     event Withdraw(address indexed user, address indexed asset, uint256 amount);
+    event ReserveFactorUpdated(uint256 old, uint256 _new);
+    event APYUpdated(uint256 old, uint256 _new);
 
     uint256 reserveFactor;
     uint256 apy;
@@ -27,6 +29,7 @@ contract Staking is Ownable {
 
     mapping(address => mapping(address => uint256)) public scaledBalance; // user => asset => scaled amt
     mapping(address => mapping(address => uint256)) public userDepositIndex; // user => asset => last index
+    mapping(address => mapping(address => uint256)) public userPrincipal; // user => asset => principal
     mapping(address => uint256) totalPool;
 
     uint256 public constant RAY = 1e27;
@@ -51,11 +54,16 @@ contract Staking is Ownable {
     }
 
     function setReserveFactor(uint256 _factor) external onlyOwner {
+        uint256 oldReserveFactor = reserveFactor;
         reserveFactor = (RAY * _factor) / 100;
+        emit ReserveFactorUpdated(oldReserveFactor, reserveFactor);
     }
 
     function setAPY(uint256 rate) external onlyOwner {
+        require(rate <= 20, "APY too high");
+        uint256 oldAPY = apy;
         apy = rate;
+        emit APYUpdated(oldAPY, apy);
     }
 
     function deposit(address asset, uint256 amount) external {
@@ -65,21 +73,21 @@ contract Staking is Ownable {
         _updateLiquidityIndex(asset);
 
         uint256 index = liquidityIndex[asset];
-        scaledBalance[msg.sender][asset] += (amount * RAY) / index;
+        uint256 scaledAmount = (amount * RAY) / index;
+        scaledBalance[msg.sender][asset] += scaledAmount;
         userDepositIndex[msg.sender][asset] = index;
 
-        uint256 scaled = scaledBalance[msg.sender][asset];
-
-        IaToken(aToken[asset]).mint(msg.sender, scaled);
-        IERC20(asset).transferFrom(msg.sender, address(this), amount);
-
+        userPrincipal[msg.sender][asset] += amount;
         totalPool[asset] += amount;
+
+        IaToken(aToken[asset]).mint(msg.sender, scaledAmount);
+        require(IERC20(asset).transferFrom(msg.sender, address(this), amount), "Transfer failed");
+
         emit Deposit(msg.sender, asset, amount);
     }
 
     function withdraw(address asset, uint256 amount) external {
         if (!allowedToken[asset]) revert InvalidAsset();
-
 
         _updateLiquidityIndex(asset);
 
@@ -89,15 +97,27 @@ contract Staking is Ownable {
 
         if (amount == 0 || amount > actualBalance) revert InvalidAmount();
 
+        uint256 totalInterest = earnedInterest(msg.sender, asset);
+        uint256 proportionalInterest = (totalInterest * amount) / actualBalance;
+
+        uint256 reserveCut = (proportionalInterest * reserveFactor) / RAY;
+        uint256 userAmount = amount - reserveCut;
+
+        // Update scaled balance
         scaledBalance[msg.sender][asset] = ((actualBalance - amount) * RAY) / index;
 
-        uint256 scaled = (amount * RAY + index / 2) / index;
+        // Burn aToken
+        uint256 scaledToBurn = (amount * RAY + index / 2) / index;
+        IaToken(aToken[asset]).burn(msg.sender, scaledToBurn);
 
-        IaToken(aToken[asset]).burn(msg.sender, scaled);
-        IERC20(asset).transfer(msg.sender, amount);
+        // Subtract only principal from pool & principal mapping
+        uint256 principalWithdrawn = amount - proportionalInterest;
+        totalPool[asset] -= principalWithdrawn;
+        userPrincipal[msg.sender][asset] -= principalWithdrawn;
 
-        totalPool[asset] -= amount;
-        emit Withdraw(msg.sender, asset, amount);
+        require(IERC20(asset).transfer(msg.sender, userAmount), "Transfer failed");
+
+        emit Withdraw(msg.sender, asset, userAmount);
     }
 
     function balanceOf(address user, address asset) public view returns (uint256) {
@@ -106,16 +126,14 @@ contract Staking is Ownable {
     }
 
     function earnedInterest(address user, address asset) public view returns (uint256) {
-        uint256 currentIndex = liquidityIndex[asset];
-        uint256 depositIndex = userDepositIndex[user][asset];
+        uint256 balance = balanceOf(user, asset);
+        uint256 principal = userPrincipal[user][asset];
 
-        if (depositIndex == 0) return 0;
+        if (balance <= principal) return 0;
 
-        uint256 scaled = scaledBalance[user][asset];
-        uint256 balanceAtDeposit = (scaled * depositIndex) / RAY;
-        uint256 currentBalance = (scaled * currentIndex) / RAY;
-
-        return currentBalance - balanceAtDeposit;
+        uint256 rawInterest = balance - principal;
+        uint256 interestAfterReserve = rawInterest - ((rawInterest * reserveFactor) / RAY);
+        return interestAfterReserve;
     }
 
     function _updateLiquidityIndex(address asset) internal {
