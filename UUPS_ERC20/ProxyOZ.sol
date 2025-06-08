@@ -6,3 +6,4 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 contract MyProxy is ERC1967Proxy {
     constructor(address _logic, bytes memory _data) ERC1967Proxy(_logic, _data) {}
 }
+// This is the proxy using OZ ERC1967Proxy no logic needed all is defined and tested.
