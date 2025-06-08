@@ -20,4 +20,9 @@ contract DeployLogic is Script {
         vm.stopBroadcast();
     }
 }
-
+/* 
+---> Forge command for deploying: Run this in CLI (For testnet)
+$env:ALCHEMY_API_URL="https://eth-sepolia.g.alchemy.com/v2/YourAlchemyKey"
+$env:PRIVATE_KEY="YourWalletPrivateKey"
+forge script script/DeployLogic.s.sol:DeployLogic --rpc-url $env:ALCHEMY_API_URL --private-key $env:PRIVATE_KEY --broadcast --chain-id 11155111
+*/
