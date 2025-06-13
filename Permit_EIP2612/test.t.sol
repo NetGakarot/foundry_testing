@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../src/Permit_EIP2612.sol";
+import "../src/EIP2612.sol";
 import "forge-std/Test.sol";
 
 contract Testing is Test {
@@ -18,13 +18,13 @@ contract Testing is Test {
 
         spender = address(0xBEEF);
 
-        token = new MyToken("GAKAROT", "GAK$");
+        token = new MyToken("GAKAROT", "GAK$", address(this), 25);
 
-        token.mint(owner, 1_000 ether);
+        token.mint(owner, 1000e18);
     }
 
     function testPermit() public {
-        uint256 value = 100 ether;
+        uint256 value = 100e18;
         uint256 nonce = token.nonces(owner);
         uint256 deadline = block.timestamp + 1 hours;
 
@@ -54,5 +54,17 @@ contract Testing is Test {
 
         // Check allowance
         assertEq(token.allowance(owner, spender), value);
+    }
+
+    function testFees() external {
+        address gakarot = makeAddr("gakarot");
+        address gak = makeAddr("gak");
+        token.mint(gakarot, 100e18);
+        console.log("Balance of gakarot:", token.balanceOf(gakarot));
+        vm.startPrank(gakarot);
+        token.transfer(gak, 10e18);
+        uint256 expected = 10e18 - ((10e18 * 25) / 10000); // 0.25% fee
+        assertEq(token.balanceOf(gak), expected);  // fees deducted.
+        console.log("Balance of gakarot:", token.balanceOf(gakarot));
     }
 }
