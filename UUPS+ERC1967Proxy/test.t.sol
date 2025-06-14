@@ -32,7 +32,7 @@ contract Testing is Test {
 
     function setUp() external {
         _logic = new MyToken();
-        _proxy = new MyProxy(address(_logic),"GAKAROT","GAK$");
+        _proxy = new MyProxy(address(_logic),"GAKAROT","GAK$",address(this));
         logic = ILogic(address(_proxy));
         ironman = makeAddr("ironman");
         gakarot = makeAddr("gakarot");
