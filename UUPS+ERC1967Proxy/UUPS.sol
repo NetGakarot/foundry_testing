@@ -11,9 +11,9 @@ contract MyToken is Initializable,ERC20Upgradeable,OwnableUpgradeable,UUPSUpgrad
 
     constructor() {_disableInitializers();}
 
-    function initialize(string memory _name, string memory _symbol) external initializer {
+    function initialize(string memory _name, string memory _symbol, address _owner) external initializer {
         __ERC20_init(_name,_symbol);
-        __Ownable_init(msg.sender);
+        __Ownable_init(_owner);
     }
 
     function mint(address to, uint256 amount) external onlyOwner {
