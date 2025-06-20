@@ -15,11 +15,11 @@ error InvalidThreshold();
 
 contract AutoFeed is Ownable,AutomationCompatibleInterface {
 
-    int256 public latestPrice;
-    uint256 public lastTimeStamp;
+    int256 latestPrice;
+    uint256 lastTimeStamp;
     uint256 public interval;
-    int256 public lowerThreshold;
-    int256 public upperThreshold;
+    int256 lowerThreshold;
+    int256 upperThreshold;
 
     AggregatorV3Interface public priceFeed;
     IMyToken immutable token;
