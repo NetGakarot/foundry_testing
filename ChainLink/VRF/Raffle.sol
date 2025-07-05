@@ -98,7 +98,7 @@ contract Raffle is VRFConsumerBaseV2Plus, AutomationCompatibleInterface {
 
         emit WinnerPicked(s_recentWinner);
 
-        delete s_players;
+        s_players = new address payable[]();
         s_lastTimeStamp = block.timestamp;
         s_raffleState = RaffleState.OPEN;
     }
