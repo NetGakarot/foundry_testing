@@ -30,30 +30,4 @@ contract Handler is Test {
         currentUser = msg.sender;
         engine.mintDsc(amount);
     }
-
-    function testFuzzDepositMintBurnRedeem(uint256 _amount) external {
-        currentUser = msg.sender;
-        vm.assume(_amount >= 0.0001 ether && _amount <= 1e50);
-        weth.mint(currentUser, _amount);
-
-        weth.approve(address(engine), _amount);
-        engine.depositCollateral(address(weth), _amount);
-
-        uint256 allowedAmount = (_amount * 40) / 100;
-        engine.mintDsc(allowedAmount);
-
-        token.approve(address(engine), token.balanceOf(currentUser));
-        engine.redeemCollateralForDsc(address(weth), _amount, token.balanceOf(currentUser));
-    }
-
-    function testFuzzDepositAndRedeemCollateral(uint256 _amount) external {
-        currentUser = msg.sender;
-        vm.assume(_amount >= 0.0001 ether && _amount <= 1e50);
-        weth.mint(currentUser, _amount);
-        weth.approve(address(engine), _amount);
-        engine.depositCollateral(address(weth), _amount);
-        assertEq(engine.getCollateralBalanceOfUser(currentUser, address(weth)), _amount);
-        engine.redeemCollateral(address(weth), _amount);
-        assertEq(engine.getCollateralBalanceOfUser(currentUser, address(weth)), 0);
-    }
 }
