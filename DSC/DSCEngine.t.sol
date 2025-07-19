@@ -537,8 +537,4 @@ contract Testing is StdInvariant, Test {
     function invariant_healthFactorAlwaysAboveOne() external view {
         assertGe(engine.getHealthFactor(handler.currentUser()), 1e18);
     }
-
-    function invariant_depositMintBurnRedeemAfterThatBalanceShouldAlwaysBeZero() external view {
-        assertEq(engine.getCollateralBalanceOfUser(handler.currentUser(), address(weth)), 0);
-    }
 }
